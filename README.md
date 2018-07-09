@@ -43,5 +43,5 @@ Version 1.2: compilado en Visual Studio (tira 2 warning pero igual funciona)
 
 Version 1.3: 
 
-    - casi completo, falta testear
+    - casi completo, falta testear...
    
