@@ -16,7 +16,7 @@
 	<windows.h>
 	"base.h"
 
-1531084430 source:c:\users\jean\smartprofit\codigo fuente\base.cpp
+1531700720 source:c:\users\jean\smartprofit\codigo fuente\base.cpp
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
@@ -25,9 +25,9 @@
 	<locale.h>
 	"base.h"
 
-1531083463 c:\users\jean\smartprofit\codigo fuente\base.h
+1531707931 c:\users\jean\smartprofit\codigo fuente\base.h
 
-1531083135 source:c:\users\jean\smartprofit\codigo fuente\mainmenu.cpp
+1531091340 source:c:\users\jean\smartprofit\codigo fuente\mainmenu.cpp
 	<stdio.h>
 	<stdlib.h>
 	<string.h>

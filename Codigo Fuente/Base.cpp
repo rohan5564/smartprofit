@@ -8,39 +8,7 @@
 #include <locale.h>
 #include "base.h"
 
-
-void preorden(struct NodoProducto *raiz){
-    if(raiz != NULL){
-        printf("\t-%s\t, Precio = $%d\n",raiz->productos->nombre,raiz->productos->precio);
-		preorden(raiz->izq);
-        preorden(raiz->der);
-    }
-}
-
-void InfoProducto(struct NodoProducto *raiz, char *nombreProducto){
-    if(!raiz){
-        puts("Primero debe agregar productos");
-        Sleep(1500);
-        return;
-    }
-    char nombre[MAX];
-    while(raiz && strcpy(nombre, raiz->productos->nombre)){
-        if (strcmp(nombreProducto, nombre)>0)
-            raiz = raiz->der;
-        else if(strcmp(nombreProducto, nombre)<0)
-            raiz = raiz->izq;
-        else{
-            mostrarFichaProducto(raiz->productos);
-            break;
-        }
-
-    }
-    system("pause");
-    return;
-}
-
-
-/*contar ingredientes*/
+/*FUNCION QUE RETORNA LA CANTIDAD DE INGREDIENTES QUE HAY EN SU ARGUMENTO*/
 int contarIngredientes(struct NodoIngrediente *ingredientes){
     int total = 0;
     while(ingredientes != NULL){
@@ -53,11 +21,9 @@ int contarIngredientes(struct NodoIngrediente *ingredientes){
 /*FUNCION PARA TRANSFORMAR TODOS LOS CARACTERES DE UN STRING A MINUSCULA*/
 char* lowercase(char *cadena){
 	int i;
-
 	for(i = 0; cadena[i]; i++){
 		cadena[i] = tolower(cadena[i]);
 	}
-
 	return cadena;
 }
 
@@ -93,6 +59,7 @@ void menuAgregar(struct Tienda *tienda){
                     break;
 				result = insertarProducto(&(tienda->listaProductos),nuevoProd);
 				if(result){
+                    nuevoProd->productos->cantIngredientes = contarIngredientes(nuevoProd->productos->listaIngrediente);
 					printf("Producto: \"%s\" ha sido agregado a la lista de productos!\n",nuevoProd->productos->nombre);
 				}
 				else{
@@ -134,7 +101,6 @@ void menuAgregar(struct Tienda *tienda){
 void menuEliminar(struct Tienda *tienda){
 	char buffer[MAX], *ptr;
 	int opcion;
-	struct NodoProducto *result;
 
 	do{
 		printf("Que elemento desea eliminar?\n");
@@ -175,10 +141,10 @@ void menuEliminar(struct Tienda *tienda){
 				printf("Ingrese ingrediente a eliminar: ");
 				fgets(buffer,MAX,stdin);
 				buffer[strlen(buffer)-1] = '\0';
-				quitarIngredienteProductos(&(tienda->listaProductos),buffer);
+				tienda->listaProductos = quitarIngredienteProductos(tienda->listaProductos,buffer);
 				eliminarIngrediente(&(tienda->tablaIngredientes),buffer);
 				printf("Ingrediente eliminado exitosamente!\n");
-				Sleep(1200);
+				system("pause");
 				system("cls");
 				break;
 			}
@@ -223,10 +189,7 @@ void menuInformacion(struct Tienda *tienda){
                     system("PAUSE");
                     break;
                 }
-                puts("INORDEN!!!:\n");
 				inorden(tienda->listaProductos);
-				puts("PREORDEN!!!:\n");
-				preorden(tienda->listaProductos);
 				system("PAUSE");
 				break;
 			}
@@ -259,6 +222,28 @@ void menuInformacion(struct Tienda *tienda){
 			}
 		}
 	}while(opcion);
+}
+
+/*FUNCION QUE MUESTRA LA INFORMACION DE 'X' PRODUCTO*/
+void InfoProducto(struct NodoProducto *raiz, char *nombreProducto){
+    if(!raiz){
+        puts("Primero debe agregar productos");
+        Sleep(1500);
+        return;
+    }
+    char nombre[MAX];
+    while(raiz && strcpy(nombre, raiz->productos->nombre)){
+        if (strcmp(nombreProducto, nombre)>0)
+            raiz = raiz->der;
+        else if(strcmp(nombreProducto, nombre)<0)
+            raiz = raiz->izq;
+        else{
+            mostrarFichaProducto(raiz->productos);
+            break;
+        }
+    }
+    system("pause");
+    return;
 }
 
 /*FUNCION QUE MUESTRA EL MENU DE BUSCAR -> PRODUCTO*/
@@ -319,25 +304,51 @@ void menuAccionProducto(struct Tienda *tienda){
 	}
 }
 
-/*FUNCION QUE ELIMINA INGREDIENTE ELEGIDO DE TODOS LOS PRODUCTOS EXISTENTES EN LA TIENDA*/
-int quitarIngredienteProductos(struct NodoProducto **listaProductos, char *nombreIng){
-	struct NodoProducto *rec = *listaProductos;
-	struct NodoIngrediente *ing;
-	int valor = 0;
+/*FUNCION QUE ELIMINA PRODUCTOS QUE POSEAN 'X' INGREDIENTE*/
+struct NodoProducto *quitarIngredienteProductos(struct NodoProducto *listaProductos, char *nombreIng){
+    int flagIng = 0, flagProd = 0;
+    struct Producto **pila = NULL;
+    listaProductos = recalcularProductos(listaProductos, nombreIng, &flagIng, &flagProd, &(pila));
+    printf("\nproductos que contienen %s: %i\nproductos eliminados por falta de ingredientes: %i\n\n",nombreIng, flagIng, flagProd);
+    while(*pila){
+        listaProductos = eliminarProducto(listaProductos, (*pila)->nombre);
+        *pila++;
+    }
+	return listaProductos;
+}
 
-	if((*listaProductos) == NULL)
-		return valor;
-	while(rec != NULL){
-		ing = buscarIngrediente(rec->productos->listaIngrediente,nombreIng);
-		if(ing != NULL){
-			rec->productos->precio = (int) (rec->productos->precio - (rec->productos->listaIngrediente->ingredientes->precio + rec->productos->listaIngrediente->ingredientes->precio * 0.15));
-			eliminarIngrediente(&(rec->productos->listaIngrediente),ing->ingredientes->nombre);
-			valor = 1;
-		}
-		rec = rec->der;
-	}
-
-	return valor;
+/*FUNCION QUE ELIMINA REFERENCIAS DE INGREDIENTES EN LOS PRODUCTOS*/
+struct NodoProducto *recalcularProductos(struct NodoProducto *raiz, char *nombreProducto,
+                                          int *fIng, int *fProd, struct Producto ***arr){
+    if(raiz){
+		struct NodoIngrediente *tmp = buscarIngrediente(raiz->productos->listaIngrediente, nombreProducto);
+        if(tmp){
+            raiz->productos->cantIngredientes--;
+            (*fIng)++;
+            if(raiz->productos->cantIngredientes < 2){
+                (*fProd)++;
+                *arr = (struct Producto**)realloc(&arr, sizeof(struct Producto*));
+                *arr++ = &(raiz->productos);
+            }
+            else{
+                if(raiz->productos->listaIngrediente == tmp){
+                    if(!tmp->sig)
+                        raiz->productos->listaIngrediente = NULL;
+                    else
+                        raiz->productos->listaIngrediente = tmp->sig;
+                }
+                else{
+                    tmp->ant->sig = tmp->sig;
+                    if(tmp->sig)
+                        tmp->sig->ant = tmp->ant;
+                }
+                raiz->productos->precio = calculaPrecio(raiz->productos->listaIngrediente);
+            }
+        }
+        recalcularProductos(raiz->izq, nombreProducto, fIng, fProd, arr);
+        recalcularProductos(raiz->der, nombreProducto, fIng, fProd, arr);
+    }
+    return raiz;
 }
 
 /*FUNCION QUE MUESTRA EL MENU DE BUSCAR -> INGREDIENTE*/
@@ -345,7 +356,7 @@ void menuAccionIngrediente(struct Tienda *tienda){
 	struct NodoProducto *rec;
 	struct NodoIngrediente *busquedaIng;
 	char buffer[MAX], *ptr;
-	int opcion,resultado,precio;
+	int opcion,precio;
 
 	printf("Escriba el ingrediente a buscar: ");
 	fgets(buffer,MAX,stdin);
@@ -393,7 +404,7 @@ void menuAccionIngrediente(struct Tienda *tienda){
 					break;
 				}
 			}
-		}while((opcion != 2) && (opcion != 3));
+		}while(opcion != 1);
 	}
 	/*SI NO ENCONTRO EL INGREDIENTE*/
 	else{
@@ -572,7 +583,7 @@ struct NodoProducto * cargarProducto(FILE *file, char* nombreProd, struct NodoIn
 		row = getc(file);
 		enlazarIngrediente(&(cargaProducto->productos->listaIngrediente),ingCarga);
 	}
-
+    cargaProducto->productos->cantIngredientes = contarIngredientes(cargaProducto->productos->listaIngrediente);
 
 	return cargaProducto;
 }
@@ -821,7 +832,7 @@ struct NodoProducto* nuevoProducto(struct Tienda *tienda){
 	struct NodoIngrediente *nuevoIngrediente;
 	char buffer[MAX];
 	char *ptr;
-	int datos,i = 0,precio;
+	int datos,i = 0;
 
 	nuevo = (struct NodoProducto *)malloc(sizeof(struct NodoProducto));
 	nuevo->productos = (struct Producto *)malloc(sizeof(struct Producto));
@@ -881,19 +892,6 @@ struct NodoProducto* nuevoProducto(struct Tienda *tienda){
 	return nuevo;
 }
 
-/*FUNCION QUE ELIMINA UNA LISTA DE INGREDIENTES COMPLETA*/
-void eliminarListaIng(struct NodoIngrediente **head){
-	struct NodoIngrediente *rec = *head, *next;
-
-	while(rec != NULL){
-		next = rec->sig;
-		free(rec);
-		rec = next;
-	}
-
-	*head = NULL;
-}
-
 /*FUNCION QUE BUSCA UN INGREDIENTE EN LA LISTA DE INGREDIENTES DE UN PRODUCTO*/
 struct NodoIngrediente* buscarIngrediente(struct NodoIngrediente *head, char *nombreIng){
     struct NodoIngrediente *rec = head;
@@ -912,16 +910,17 @@ void eliminarIngrediente(struct NodoIngrediente **head, char* nombreIng){
 	struct NodoIngrediente *elim = NULL;
 
 	/*VERIFICA LA EXISTENCIA DE INGREDIENTES*/
-	if(*head == NULL)
+	if(!*head)
 		printf("No hay elementos para eliminar\n");
 	else{
 		elim = buscarIngrediente(*head,nombreIng);
 
 		/*VERIFICA SI ENCONTRO EL INGREDIENTE*/
-		if(elim != NULL){
+		if(elim){
 			if(elim == *head){											//Es el primer elemento de la lista
 				if(elim->sig == NULL){										//Si es el unico elemento
-					printf("No se puede quedar sin ingredientes!\n");
+					free(elim);
+					*head = NULL;
 				}
 				else{														//Hay mas elementos
 					*head = elim->sig;
@@ -942,7 +941,7 @@ void eliminarIngrediente(struct NodoIngrediente **head, char* nombreIng){
 			}
 		}
 		else{
-			printf("No se encontro el ingrediente");
+			puts("No se encontro el ingrediente");
 		}
 	}
 	Sleep(750);
@@ -1003,7 +1002,7 @@ void mostrarFichaProducto(struct Producto *producto){
 	printf("\t-------------------------------------\n");
 	printf("\t|Nombre:\t%s\n",producto->nombre);
 	printf("\t|Precio:\t$%d\n",producto->precio);
-	printf("\t|Ingredientes:\n");
+	printf("\t|Ingredientes(%i):\n", producto->cantIngredientes);
 	while(rec != NULL){
 		printf("\t|° %.3lf[%s] de %s\n",rec->ingredientes->cantidad, rec->ingredientes->medida, rec->ingredientes->nombre);
 		rec = rec->sig;
@@ -1301,206 +1300,3 @@ void mostrarTablaIngredientes(struct NodoIngrediente *tablaIng){
 		}
 	}
 }
-/*
-void ordenar(struct NodoProducto **listaProducto){
-	struct NodoProducto *rec = *listaProducto;
-	struct Producto *data;
-
-	if(*listaProducto == NULL){
-		return;
-	}
-	while(rec->sig != NULL){
-		if(strcmp(rec->productos->nombre,rec->sig->productos->nombre) > 0){
-			data = rec->productos;
-			rec->productos = rec->sig->productos;
-			rec->sig->productos = data;
-		}
-		rec = rec->sig;
-	}
-}
-
-
-*/
-
-
-
-
-
-
-
-//----------------------------------------------------------------------
-/*FUNCION QUE ENLAZA UN PRODUCTO DENTRO DE LA LISTA DE PRODUCTOS
-void _enlazarProducto(struct NodoProducto **head, struct NodoProducto *nuevo){
-	struct NodoProducto *rec = *head;
-
-	if(*head == NULL){
-		*head = nuevo;
-	}
-	else{
-		while(rec != NULL){
-			if(rec->sig == NULL){
-				rec->sig = nuevo;
-				nuevo->ant = rec;
-				rec = nuevo;
-			}
-			rec = rec->sig;
-		}
-	}
-}
-//-----------------------------------------------------------------------
-
-struct NodoProducto* _buscarProducto(struct NodoProducto *head, char *nombreProd){
-    struct NodoProducto *rec = head;
-    nombreProd[strlen(nombreProd)-1]='\0';
-
-	while(rec != NULL){
-		if(strcmp(rec->productos->nombre,nombreProd) == 0){
-			return rec;
-		}
-		rec = rec->sig;
-	}
-	return NULL;
-}
-
-//_----------------------------------------------------------------------
-
-void _eliminarProducto(struct NodoProducto **head, char* nombreProd){
-	struct NodoProducto *elim=NULL;
-
-	//VERIFICA LA EXISTENCIA DE PRODUCTOS
-	if(*head == NULL)
-		printf("No hay elementos para eliminar\n");
-	else{
-		elim = buscarProducto(*head,nombreProd);
-
-		//VERIFICA SI ENCONTRO EL PRODUCTO
-		if(elim != NULL){
-			eliminarListaIng(&(elim->productos->listaIngrediente));
-			if(elim == *head){											//Es el primer elemento de la lista
-				if(elim->sig == NULL){										//Si es el unico elemento
-					*head = NULL;
-					free(elim);
-				}
-				else{														//Hay mas elementos
-					*head = elim->sig;
-					elim->sig->ant = NULL;
-					free(elim);
-				}
-			}
-			else{
-				if(elim->sig == NULL){									//Ultimo elemento de la Lista
-					elim->ant->sig = NULL;
-					free(elim);
-				}
-				else{													//Es un elemento entremedio
-					elim->ant->sig = elim->sig;
-					elim->sig->ant = elim->ant;
-					free(elim);
-				}
-			}
-		}
-		else{
-			printf("No se encontro el producto");
-		}
-	}
-}
-
-//-----------------------------------------------------------------------------
-
-void _guardar(struct NodoProducto *head){
-	FILE *file;
-	struct NodoProducto *rec = head;
-	struct NodoIngrediente *lista;
-	char *username, directorio[MAX];
-
-	//ABRE EL ARCHIVO EN EL DIRECTORIO INDICADO (DEFAULT)
-	username = getenv("USERPROFILE");
-	_snprintf(directorio,MAX,"%s\\SmartProfit\\Listas.csv",username);
-
-	file = fopen(directorio,"w");
-
-	//VERIFICA SI LA LISTA ESTA VACIA
-	if(head == NULL){
-		fprintf(file,"EOF;");
-		return;
-	}
-	while(rec != NULL){
-		lista = rec->productos->listaIngrediente;
-		fprintf(file,"%s;%lf",rec->productos->nombre,rec->productos->precio);
-		while(lista != NULL){
-			fprintf(file,";%.3lf%s", lista->ingredientes->cantidad, lista->ingredientes->nombre);
-			lista = lista->sig;
-		}
-		fprintf(file,"\n");
-		rec = rec->sig;
-	}
-	fprintf(file,"EOF;");
-
-	fclose(file);
-}
-
-//----------------------------------------------------------------------
-
-void _mostrarListaProductos(struct NodoProducto *lista){
-	struct NodoProducto *rec = lista;
-
-	ordenar(&lista);
-
-	//VERIFICA SI LA LISTA ESTA VACIA
-	if(lista == NULL){
-		printf("No hay productos para mostrar\n");
-	}
-	else{
-		printf("Productos:\n");
-		while(rec != NULL){
-			printf("\t-%s\t, Precio = $%d\n",rec->productos->nombre,rec->productos->precio);
-			rec = rec->sig;
-		}
-	}
-}
-
-//------------------------------------------------------------------------
-
-/*FUNCION QUE PERMITE EXPORTAR UNA LISTA SIMPLE CON NOMBRE Y PRECIO A UNA DIRECCION DESEADA
-void exportarListaProductos(struct Tienda *tienda){
-	FILE *file;
-	struct NodoProducto *rec = tienda->listaProductos;
-	char *username, directorio[MAX], buffer[MAX];
-
-	//VERIFICA SI HAY PRODUCTOS EN LA LISTA
-	if(tienda->listaProductos == NULL){
-		printf("No hay productos en la lista!\n");
-		Sleep(800);
-		system("cls");
-		return;
-	}
-
-	//PIDE AL USUARIO ELEGIR UNA DIRECCION EXISTENTE PARA GUARDAR EL ARCHIVO
-	username = getenv("USERPROFILE");
-	do{
-		printf("Elija el destino del archivo (Default : %s\\SmartProfit):\n",username);
-		printf("%s\\",username);
-		fgets(buffer,MAX,stdin);
-		buffer[strlen(buffer)-1] = '\0';
-		_snprintf(directorio,MAX,"%s\\%s\\Productos.csv",username,buffer);
-		file = fopen(directorio,"w");
-		if(file == NULL){
-			printf("La direccion no existe, elija una direccion valida/existente!\n");
-			Sleep(1200);
-			system("cls");
-		}
-	}while(file == NULL);
-
-	while(rec != NULL){
-		fprintf(file,"%s;%d\n",rec->productos->nombre, rec->productos->precio);
-		rec = rec->sig;
-	}
-
-	printf("Lista exportada exitosamente!\n");
-	printf("Su archivo se encuentra en: %s\n",directorio);
-
-	system("PAUSE");
-	system("cls");
-
-	fclose(file);
-}*/

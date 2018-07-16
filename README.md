@@ -41,7 +41,7 @@ Version 1.2: compilado en Visual Studio (tira 2 warning pero igual funciona)
     -hasta el momento nada mas esta fallando
 
 
-Version 1.3: 
+Version 1.3.1: 
 
     - casi completo, falta testear...
    

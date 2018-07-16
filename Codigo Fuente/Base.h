@@ -52,12 +52,8 @@ int insertarProducto(struct NodoProducto **raiz, struct NodoProducto *nuevoNodo)
 void modificarProducto(struct Producto *, struct NodoIngrediente *);
 void mostrarFichaProducto(struct Producto *);
 int calculaPrecio(struct NodoIngrediente *);
-int quitarIngredienteProductos(struct NodoProducto **, char *);
+struct NodoProducto *quitarIngredienteProductos(struct NodoProducto *, char *);
 void actualizarProductos(struct NodoProducto **, char *);
-
-
-
-//void ordenar(struct NodoProducto **);
 
 //Funciones Operacion sobre Ingrediente
 struct NodoIngrediente* agregarIngredienteTabla(struct NodoIngrediente *);
@@ -66,7 +62,6 @@ struct NodoIngrediente* buscarIngrediente(struct NodoIngrediente *, char *);
 void eliminarIngrediente(struct NodoIngrediente **, char*);
 void modificarIngrediente(struct Ingrediente *);
 void enlazarIngrediente(struct NodoIngrediente **, struct NodoIngrediente *);
-void eliminarListaIng(struct NodoIngrediente **);
 void mostrarFichaIngrediente(struct Ingrediente *);
 
 //Funciones Menu
@@ -76,20 +71,15 @@ void menuBuscar(struct Tienda *);
 void menuAccionProducto(struct Tienda *);
 void menuAccionIngrediente(struct Tienda *);
 void menuInformacion(struct Tienda *);
-//void mostrarListaProductos(struct NodoProducto *);
 void mostrarTablaIngredientes(struct NodoIngrediente *);
 
-//void enlazarProducto(struct NodoProducto **, struct NodoProducto *);
-
-//Funciones Nuevas
-
+//Funciones de utilidad
 void inorden(struct NodoProducto *raiz);
 char *lowercase(char *cadena);
 void escrituraDatos(struct NodoProducto *raiz, FILE *file);
 struct NodoProducto *cambioNodo(struct NodoProducto *raizBusqueda);
-
-///
 int contarIngredientes(struct NodoIngrediente *ingredientes);
 void InfoProducto(struct NodoProducto *raiz, char *nombreProducto);
-void preorden(struct NodoProducto *raiz);
+struct NodoProducto *recalcularProductos(struct NodoProducto *raiz, char *nombreProducto,
+                                          int *fIng, int *fProd, struct Producto ***arr);
 #endif
